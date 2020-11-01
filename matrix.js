@@ -8,7 +8,7 @@ class Matrix {
         if (this.rows === undefined && this.cols === undefined)
             this.rows = this.data.length
 
-        this.data = this.data.flat()
+        this.data = this.data.flat().map(e => e*1)
 
         if (this.rows === undefined)
             this.rows = Math.floor(this.data.length / this.cols) | 0
@@ -23,7 +23,7 @@ class Matrix {
             throw Error('Wrong matrix data')
     }
 
-    at(y, x) {
+    at(y, x=0) {
         return this.data[y * this.cols + x]
     }
 
@@ -51,6 +51,15 @@ class Matrix {
                 ret.set(x, y, this.at(y, x))
 
         return ret
+    }
+
+    get cross() {
+        if (this.rows !== 3 || this.cols !== 1)
+            throw Error(`Cant get cross for shape ${this.rows}x${this.cols}.`)
+
+        const [x, y, z] = this.data
+
+        return new Matrix({}, [0, -z, y], [z, 0, -x], [-y, x, 0])
     }
 
     hconcat(other) {
@@ -83,7 +92,7 @@ class Matrix {
     }
 
     static sum(a, b) {
-        if (a.rows !== b.rows || a.rows !== b.cols)
+        if (a.rows !== b.rows || a.cols !== b.cols)
             throw Error(`Cant add shapes ${a.rows}x${a.cols} and ${b.rows}x${b.cols}.`)
 
         const ret = new Matrix({ rows: a.rows, cols: a.cols })
@@ -215,11 +224,43 @@ function projection_matrix(camera_matrix, [yaw, pitch, roll], view_position) {
     rotation_matrix = compute_rotation_matrix(yaw, pitch, roll).T
 
     translation_vector = Matrix.op(-1, '*', rotation_matrix, '*', new Matrix({}, ...view_position))
-    console.log('t = ', translation_vector.T.pretty)
+    // console.log('t = ', translation_vector.T.pretty)
 
     const Rt = rotation_matrix.hconcat(translation_vector).vconcat(new Matrix({}, [0, 0, 0, 1]))
-    console.log('K = ', camera_matrix.pretty)
-    console.log('Rt = ', Rt.pretty)
-    console.log('P = ', Matrix.multiply(camera_matrix, Rt).pretty)
+    // console.log('K = ', camera_matrix.pretty)
+    // console.log('Rt = ', Rt.pretty)
+    // console.log('P = ', Matrix.multiply(camera_matrix, Rt).pretty)
     return Matrix.multiply(camera_matrix, Rt)
+}
+
+function fundamental_matrix(camera_matrix1, [yaw1, pitch1, roll1], view_position1, 
+                            camera_matrix2, [yaw2, pitch2, roll2], view_position2)
+{
+    const K1 = new Matrix({}, ...camera_matrix1)
+    const K2 = new Matrix({}, ...camera_matrix2)
+
+    const R1 = compute_rotation_matrix(yaw1, pitch1, roll1)
+    const R2 = compute_rotation_matrix(yaw2, pitch2, roll2)
+
+    const t1 = new Matrix({}, ...view_position1)
+    const t2 = new Matrix({}, ...view_position2)
+
+    const R12 = Matrix.multiply(R1.T, R2)
+    const t12 = Matrix.multiply(R1.T, Matrix.op(t2, '-', t1))
+
+    const E = Matrix.multiply(R12.T, Matrix.op(-1, '*', R12.T, '*', t12).cross)
+    const F = Matrix.op(K2, '*', E, '*', K1.T)
+
+    return F
+}
+
+function compute_lines(id, x, y, F)
+{
+    const point = new Matrix({}, x, y, 1)
+
+    const eq = id == 1 ? Matrix.multiply(F, point).data : Matrix.multiply(F.T, point).data
+
+    const f = x => -eq[0]/eq[1] * x - eq[2]/eq[1]
+
+    return [-1, f(-1), 1, f(1)]
 }
