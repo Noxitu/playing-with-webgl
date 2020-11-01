@@ -5,51 +5,70 @@
 <style>
 main {
     display: grid;
-    grid-template-columns: auto auto;
+    grid-template-columns: 1fr auto auto 1fr;
+    grid-template-areas: 
+        "canvas1 canvas1 canvas2 canvas2"
+        "settings1 settings settings settings2";
 }
 canvas {
     border: 1px solid black;
+    margin: 0 auto 10px;
+    display: block;
 }
 #main_canvas {
     display: none;
 }
-.bar {
-    margin: 10px auto;
-    display: block;
-    border: 2px solid black;
-    width: 350px;
-    height: 20px;
+.settings {
+    display: grid;
+    grid-template-columns: 1fr auto auto 1fr;
+    grid-template-rows: repeat(auto);
 }
-.bar > div {
-    height: 100%;
-    background-color: #000;
+.settings > label {
+    grid-column: 2;
+}
+.settings > input {
+    grid-column: 3;
+    width: 350px;
+    margin-left: 15px;
 }
 </style>
 
 <main>
-    <section>
+    <section style="grid-area: canvas1;">
         <canvas id="canvas1" width="600" height="600"></canvas>
-        <div data-setting="camera1-x" data-min="-220" data-max="115" class="bar"></div>
-        <div data-setting="camera1-y" data-min="-315" data-max="50" class="bar"></div>
-        <div data-setting="camera1-z" data-min="45" data-max="210" class="bar"></div>
-        <div data-setting="camera1-yaw" data-min="-180" data-max="180" class="bar"></div>
-        <div data-setting="camera1-pitch" data-min="-180" data-max="180" class="bar"></div>
-        <div data-setting="camera1-roll" data-min="-180" data-max="180" class="bar"></div>
     </section>
-    <section>
+
+    <section class="settings" style="grid-area: settings1;">
+        <label for="camera1-fov">FoV</label><input type="range" min="10" max="120" value="50" name="camera1-fov">
+        <label for="camera1-x">x</label><input type="range" min="-220" max="115" name="camera1-x">
+        <label for="camera1-y">y</label><input type="range" min="-315" max="50" name="camera1-y">
+        <label for="camera1-z">z</label><input type="range" min="45" max="210" name="camera1-z">
+        <label for="camera1-yaw">yaw</label><input type="range" min="-180" max="180" name="camera1-yaw">
+        <label for="camera1-pitch">pitch</label><input type="range" min="-180" max="180" name="camera1-pitch">
+        <label for="camera1-roll">roll</label><input type="range" min="-180" max="180" name="camera1-roll">
+    </section>
+
+    <section style="grid-area: settings;">
+
+    </section>
+
+    <section style="grid-area: canvas2;">
         <canvas id="canvas2" width="600" height="600"></canvas>
-        <div data-setting="camera2-x" data-min="-220" data-max="115" class="bar"></div>
-        <div data-setting="camera2-y" data-min="-315" data-max="50" class="bar"></div>
-        <div data-setting="camera2-z" data-min="45" data-max="210" class="bar"></div>
-        <div data-setting="camera2-yaw" data-min="-180" data-max="180" class="bar"></div>
-        <div data-setting="camera2-pitch" data-min="-180" data-max="180" class="bar"></div>
-        <div data-setting="camera2-roll" data-min="-180" data-max="180" class="bar"></div>
+    </section>
+
+    <section class="settings" style="grid-area: settings2;">
+        <label for="camera2-fov">FoV</label><input type="range" min="10" max="120" value="50" name="camera2-fov">
+        <label for="camera2-x">x</label><input type="range" min="-220" max="115" name="camera2-x">
+        <label for="camera2-y">y</label><input type="range" min="-315" max="50" name="camera2-y">
+        <label for="camera2-z">z</label><input type="range" min="45" max="210" name="camera2-z">
+        <label for="camera2-yaw">yaw</label><input type="range" min="-180" max="180" name="camera2-yaw">
+        <label for="camera2-pitch">pitch</label><input type="range" min="-180" max="180" name="camera2-pitch">
+        <label for="camera2-roll">roll</label><input type="range" min="-180" max="180" name="camera2-roll">
     </section>
 </main>
 
 <canvas id="main_canvas" width="600" height="600"></canvas>
 
-<script src="sliders.js"></script>
 <script src="matrix.js"></script>
 <script src="buffer.js"></script>
 <script src="shaders.js"></script>

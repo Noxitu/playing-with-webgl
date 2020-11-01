@@ -17,30 +17,70 @@ function skipNewline(buffer, index)
     return index
 }
 
+function setting(name)
+{
+    const element = document.querySelector(`[name="${name}"]`)
+    const value = element.value
+    //console.log(element, value)
+
+    if (element.type === 'checkbox')
+        return element.checked
+
+    if (element.type === 'slider')
+        return value*1
+    return value
+}
+
+function allSettings(name)
+{
+    return JSON.stringify(
+        Array
+            .from(document.querySelectorAll(`[name^="${name}"]`))
+            .map(e => [e.name, setting(e.name)])
+    )
+}
+
 async function main()
 {
     const canvas = document.querySelector('#main_canvas')
-    // canvas.width = window.innerWidth
-    // canvas.height = window.innerHeight
 
     const gl = canvas.getContext("webgl")
+
     const canvases = {
         'camera1': document.querySelector('#canvas1').getContext('2d'),
         'camera2': document.querySelector('#canvas2').getContext('2d')
     }
-    console.log(canvases)
 
     const program = createProgram(gl)
     const buffer = await createBuffer(gl)
     const texture = await createTexture(gl)
 
-    var id = 1
- 
-    function render()
-    {
-        const name = `camera${id}`
-        id = 3 - id
+    const prevSettings = {}
 
+    function animationFrame()
+    {
+        renderIfNeeded('camera1')
+        renderIfNeeded('camera2')
+
+        requestAnimationFrame(animationFrame)
+    }
+
+    requestAnimationFrame(animationFrame)
+
+    function renderIfNeeded(name)
+    {
+        const settings = allSettings(name)
+
+        if (prevSettings[name] === settings)
+            return
+
+        prevSettings[name] = settings
+
+        renderView(name)
+    }
+ 
+    function renderView(name)
+    {
         gl.useProgram(program.program)
 
         gl.bindBuffer(gl.ARRAY_BUFFER, buffer.buffer)
@@ -56,24 +96,23 @@ async function main()
         gl.bindTexture(gl.TEXTURE_2D, texture)
         gl.uniform1i(program.uniforms.sampler, 0)
 
+        const focal = 0.5/Math.tan(Math.PI*setting(`${name}-fov`)/180/2)
+
         viewMatrix = projection_matrix([
-            1, 0, 0, 0,
-            0, -1, 0, 0,
+            focal, 0, 0, 0,
+            0, -focal, 0, 0,
             0, 0, 1, 0,
             0, 0, 1, 0
         ],[
-            settings[`${name}-yaw`], settings[`${name}-pitch`], settings[`${name}-roll`]
-            // 1, 0, 0,
-            // 0, 0, 1,
-            // 0, -1, 0
+            setting(`${name}-yaw`), setting(`${name}-pitch`), setting(`${name}-roll`)
         ],[
-            settings[`${name}-x`], settings[`${name}-y`], settings[`${name}-z`]
+            setting(`${name}-x`), setting(`${name}-y`), setting(`${name}-z`)
         ])
 
         gl.uniformMatrix4fv(program.uViewMatrix, false, transpose(viewMatrix).data)
     
         // Render
-        gl.clearColor(0.8, 0.2, 0.8, 1.0)
+        gl.clearColor(0.2, 0.4, 0.6, 1.0)
         gl.clearDepth(-1000000)
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
         gl.enable(gl.DEPTH_TEST)
@@ -83,27 +122,7 @@ async function main()
         gl.flush()
 
         canvases[name].drawImage(canvas, 0, 0)
-        
-        if (loop)
-            requestAnimationFrame(render)
     }
-
-    var loop = true
-
-    document.addEventListener('keypress', function(event)
-    {
-        if (event.code == 'Space')
-        {
-            loop = !loop
-            if (loop)
-            {
-                ZERO_TIME = (new Date().getTime() - (timestamp + ZERO_TIME) + ZERO_TIME)
-                requestAnimationFrame(render)
-            }
-        }
-    })
-
-    requestAnimationFrame(render)
 }
 
 main()

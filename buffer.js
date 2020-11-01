@@ -40,8 +40,8 @@ function fetchTexture()
     return new Promise((resolve, reject) => {
         const image = new Image()
         image.onload = () => { resolve(image) }
-        // image.src = 'data/di-trevi/Texture.4096.jpg'
-        image.src = 'data/di-trevi/Texture.jpg'
+        image.onerror = () => { image.src = 'data/di-trevi/Texture.jpg' }
+        image.src = 'data/di-trevi/Texture.4096.jpg'
     })
 }
 
