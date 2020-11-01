@@ -11,10 +11,18 @@ main {
         "canvas1 canvas1 canvas2 canvas2"
         "settings1 settings settings settings2";
 }
-canvas {
+.canvas-container {
+    position: relative;
     border: 1px solid black;
     margin: 0 auto 10px;
     display: block;
+    width: 600px;
+    height: 600px;
+}
+.canvas-container > * {
+    position: absolute;
+    top: 0;
+    left: 0;
 }
 #main_canvas {
     display: none;
@@ -36,7 +44,10 @@ canvas {
 
 <main>
     <section style="grid-area: canvas1;">
-        <canvas id="canvas1" width="600" height="600"></canvas>
+        <div class="canvas-container">
+            <canvas id="canvas1" width="600" height="600"></canvas>
+            <svg id="svg1" width="600" height="600" viewBox="-1 -1 2 2" ></svg>
+        </div>
     </section>
 
     <section class="settings" style="grid-area: settings1;">
@@ -54,7 +65,10 @@ canvas {
     </section>
 
     <section style="grid-area: canvas2;">
-        <canvas id="canvas2" width="600" height="600"></canvas>
+        <div class="canvas-container">
+            <canvas id="canvas2" width="600" height="600"></canvas>
+            <svg id="svg2" width="600" height="600" viewBox="-1 -1 2 2" ></svg>
+        </div>
     </section>
 
     <section class="settings" style="grid-area: settings2;">
