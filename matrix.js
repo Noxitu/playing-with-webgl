@@ -1,152 +1,209 @@
 
-function matrix(data, rows, cols)
-{
-    // console.log('matrix', data, rows, cols)
 
-    if (rows === undefined)
-        rows = Math.floor(Math.sqrt(data.length))|0
+class Matrix {
+    constructor({ rows, cols } = {}) {
+        [this.rows, this.cols] = [rows, cols]
+        this.data = Array.from(arguments).slice(1)
 
-    if (cols === undefined)
-        cols = Math.floor(data.length/rows)|0
+        if (this.rows === undefined && this.cols === undefined)
+            this.rows = this.data.length
 
-    if (rows*cols != data.length)
-        throw Error("Invalid matrix size")
+        this.data = this.data.flat()
 
-    return {data, rows, cols}
-}
+        if (this.rows === undefined)
+            this.rows = Math.floor(this.data.length / this.cols) | 0
 
-function transpose(a)
-{
-    const ret = a.data.slice()
+        if (this.cols === undefined)
+            this.cols = Math.floor(this.data.length / this.rows) | 0
 
-    for (var y = 0; y < a.rows; ++y)
-        for (var x = 0; x < a.cols; ++x)
-            ret[x*a.rows+y] = a.data[y*a.cols+x]
+        if (this.data.length == 0)
+            this.data = Array(this.rows * this.cols).fill(0)
 
-    return matrix(ret, a.cols, a.rows)
-}
-
-function multiply(a, b)
-{
-    // console.log('multiply', a, b)
-
-    if (Number.isFinite(a))
-    {
-        const data = b.data.slice()
-
-        for (var i = 0; i < data.length; ++i)
-            data[i] = a*data[i]
-
-        return matrix(data, b.rows, b.cols)
+        if (this.rows * this.cols !== this.data.length)
+            throw Error('Wrong matrix data')
     }
 
-    if (a.cols != b.rows)
-        throw Error('Wrong dimentions for matmul.')
-
-    const c = Array(a.rows*b.cols).fill(0)
-
-    for (var y = 0; y < a.rows; ++y)
-        for (var x = 0; x < b.cols; ++x)
-            for (var k = 0; k < a.cols; ++k)
-                c[y*b.cols+x] += a.data[y*a.cols+k] * b.data[k*b.cols+x]
-
-    return matrix(c, a.rows, b.cols)
-}
-
-function add_column(a, column)
-{
-    if (a.rows != column.length)
-        throw Error('Cant add column')
-
-    const data = Array(a.rows*(a.cols+1)).fill(0)
-
-    for (var y = 0; y < a.rows; ++y)
-    {
-        for (var x = 0; x < a.cols; ++x)
-            data[y*(a.cols+1)+x] = a.data[y*a.cols+x]
-
-        data[y*(a.cols+1)+a.cols] = column[y]
+    at(y, x) {
+        return this.data[y * this.cols + x]
     }
 
-    return matrix(data, a.rows, a.cols+1)
-}
-
-function add_row(a, row)
-{
-    if (a.cols != row.length)
-        throw Error('Cant add row')
-
-    const data = Array((a.rows+1)*a.cols).fill(0)
-
-    for (var x = 0; x < a.cols; ++x)
-    {
-        for (var y = 0; y < a.rows; ++y)
-            data[y*a.cols+x] = a.data[y*a.cols+x]
-
-        data[y*a.cols+a.rows] = row[x]
+    set(y, x, value) {
+        this.data[y * this.cols + x] = value
     }
 
-    return matrix(data, a.rows+1, a.cols)
-}
+    toArrays() {
+        const rows = []
+        for (var y = 0; y < this.rows; ++y) {
+            const row = []
 
-function pretty_matrix(a)
-{
-    const rows = []
+            for (var x = 0; x < this.cols; ++x)
+                row.push(this.at(y, x))
 
-    for (var y = 0; y < a.rows; ++y)
-    {
-        const row = []
-        for (var x = 0; x < a.cols; ++x)
-            row.push(a.data[y*a.cols+x])
-
-        rows.push(row.join('  '))
+            rows.push(row)
+        }
+        return rows
     }
-    return rows.join('\n')
+
+    get T() {
+        const ret = new Matrix({ cols: this.rows, rows: this.cols })
+        for (var y = 0; y < this.rows; ++y)
+            for (var x = 0; x < this.cols; ++x)
+                ret.set(x, y, this.at(y, x))
+
+        return ret
+    }
+
+    hconcat(other) {
+        if (this.rows !== other.rows)
+            throw Error(`Cant hconcat shapes ${this.rows}x${this.cols} and ${other.rows}x${other.cols}.`)
+
+        const ret = new Matrix({ rows: this.rows, cols: this.cols + other.cols })
+        for (var y = 0; y < ret.rows; ++y)
+            for (var x = 0; x < ret.cols; ++x)
+                ret.set(y, x, x < this.cols ? this.at(y, x) : other.at(y, x - this.cols))
+
+        return ret
+    }
+
+    vconcat(other) {
+        if (this.cols !== other.cols)
+            throw Error(`Cant hconcat shapes ${this.rows}x${this.cols} and ${other.rows}x${other.cols}.`)
+
+        const ret = new Matrix({ rows: this.rows + other.rows, cols: this.cols })
+        for (var y = 0; y < ret.rows; ++y)
+            for (var x = 0; x < ret.cols; ++x)
+                ret.set(y, x, y < this.rows ? this.at(y, x) : other.at(y - this.rows, x))
+
+        return ret
+    }
+
+    get pretty() {
+        const rows = this.toArrays()
+        return rows.map(row => row.join(' ')).join('\n')
+    }
+
+    static sum(a, b) {
+        if (a.rows !== b.rows || a.rows !== b.cols)
+            throw Error(`Cant add shapes ${a.rows}x${a.cols} and ${b.rows}x${b.cols}.`)
+
+        const ret = new Matrix({ rows: a.rows, cols: a.cols })
+        for (var y = 0; y < ret.rows; ++y)
+            for (var x = 0; x < ret.cols; ++x)
+                ret.set(y, x, a.at(y, x) + b.at(y, x))
+
+        return ret
+    }
+
+    static multiply_by_scalar(scalar, matrix) {
+        const ret = new Matrix({ rows: matrix.rows, cols: matrix.cols })
+        for (var y = 0; y < ret.rows; ++y)
+            for (var x = 0; x < ret.cols; ++x)
+                ret.set(y, x, scalar * matrix.at(y, x))
+
+        return ret
+    }
+
+    static multiply(a, b) {
+        if (Number.isFinite(a))
+            return Matrix.multiply_by_scalar(a, b)
+        if (Number.isFinite(b))
+            return Matrix.multiply_by_scalar(b, a)
+
+        if (a.cols !== b.rows)
+            throw Error(`Cant multiply shapes ${a.rows}x${a.cols} and ${b.rows}x${b.cols}.`)
+
+        const ret = new Matrix({ rows: a.rows, cols: b.cols })
+        for (var y = 0; y < ret.rows; ++y)
+            for (var x = 0; x < ret.cols; ++x)
+                for (var k = 0; k < a.cols; ++k)
+                    ret.set(y, x, ret.at(y, x) + a.at(y, k) * b.at(k, x))
+
+        return ret
+    }
+
+    static op() {
+        var expr = Array.from(arguments)
+        
+        for (var i = 0; i < expr.length;) {
+            if (expr[i] === '*') {
+                const a = expr[i - 1]
+                const b = expr[i + 1]
+                const c = Matrix.multiply(a, b)
+                var newExpr = i > 1 ? expr.slice(0, i - 1) : []
+                newExpr.push(c)
+                newExpr = newExpr.concat(expr.slice(i + 2))
+                expr = newExpr
+            }
+            else
+                i += 1
+        }
+
+
+        for (var i = 0; i < expr.length;) {
+            if (expr[i] === '+' || expr[i] === '-') {
+                const a = expr[i - 1]
+                const b = expr[i + 1]
+                const c = (expr[i] === '+'
+                    ? Matrix.sum(a, b)
+                    : Matrix.sum(a, Matrix.multiply(-1, b)));
+                const newExpr = expr.slice(0, i - 1)
+                newExpr.push(c)
+                newExpr.concat(expr.slice(i + 2))
+                expr = newExpr
+            }
+            else
+                i += 1
+        }
+
+        if (expr.length != 1)
+            throw Error('Expresion failed')
+        return expr[0]
+    }
+
+    static add = '+'
+    static add = '-'
+    static mul = '*'
 }
 
-function compute_rotation_matrix(yaw, pitch, roll)
-{
-    const fromAircraftCS = matrix([
-        0, 1, 0,
-        1, 0, 0,
-        0, 0, -1
-    ])
-    const toAircraftCS = matrix([
-        0, 0, 1,
-        1, 0, 0,
-        0, 1, 0
-    ])
 
-    const cos = deg => Math.cos(Math.PI*deg/180)
-    const sin = deg => Math.sin(Math.PI*deg/180)
+function compute_rotation_matrix(yaw, pitch, roll) {
+    const fromAircraftCS = new Matrix({},
+        [0, 1, 0],
+        [1, 0, 0],
+        [0, 0, -1]
+    )
 
-    const yawRotation = matrix([
-        cos(yaw), -sin(yaw), 0,
-        sin(yaw), cos(yaw), 0,
-        0, 0, 1
-    ])
+    const toAircraftCS = new Matrix({},
+        [0, 0, 1],
+        [1, 0, 0],
+        [0, 1, 0]
+    )
 
-    const pitchRotation = matrix([
-        cos(pitch), 0, sin(pitch),
-        0, 1, 0,
-        -sin(pitch), 0, cos(pitch)
-    ])
+    const cos = deg => Math.cos(Math.PI * deg / 180)
+    const sin = deg => Math.sin(Math.PI * deg / 180)
 
-    const rollRotation = matrix([
-        1, 0, 0,
-        0, cos(roll), sin(roll),
-        0, -sin(roll), cos(roll)
-    ])
+    const yawRotation =  new Matrix({},
+        [cos(yaw), -sin(yaw), 0],
+        [sin(yaw), cos(yaw), 0],
+        [0, 0, 1]
+    )
 
-    var total =  multiply(rollRotation, toAircraftCS)
-    total =  multiply(pitchRotation, total)
-    total =  multiply(yawRotation, total)
-    total =  multiply(fromAircraftCS, total)
-    return total
+    const pitchRotation =  new Matrix({},
+        [cos(pitch), 0, sin(pitch)],
+        [0, 1, 0],
+        [-sin(pitch), 0, cos(pitch)]
+    )
+
+    const rollRotation = new Matrix({},
+        [1, 0, 0],
+        [0, cos(roll), sin(roll)],
+        [0, -sin(roll), cos(roll)]
+    )
+
+    return Matrix.op(fromAircraftCS, '*', yawRotation, '*', pitchRotation, '*', rollRotation, '*', toAircraftCS)
 }
 
-function projection_matrix(camera_matrix, [yaw, pitch, roll], view_position)
-{
+function projection_matrix(camera_matrix, [yaw, pitch, roll], view_position) {
     // Normal convention:
     // P = K @ [R|t]
     // y = [R|t] x = Rx + t
@@ -154,13 +211,15 @@ function projection_matrix(camera_matrix, [yaw, pitch, roll], view_position)
     // Custom convention:
     // y = R'(x-t) = [R'|-R't]
 
-    camera_matrix = matrix(camera_matrix)
-    rotation_matrix = transpose(compute_rotation_matrix(yaw, pitch, roll))
-    translation_column = multiply(-1, multiply(rotation_matrix, matrix(view_position, 3)))
+    camera_matrix = new Matrix({}, ...camera_matrix)
+    rotation_matrix = compute_rotation_matrix(yaw, pitch, roll).T
 
-    const Rt = add_column(rotation_matrix, translation_column.data)
-    const extendedRt = add_row(Rt, [0, 0, 0, 1])
-    const P = multiply(camera_matrix, extendedRt)
+    translation_vector = Matrix.op(-1, '*', rotation_matrix, '*', new Matrix({}, ...view_position))
+    console.log('t = ', translation_vector.T.pretty)
 
-    return P
+    const Rt = rotation_matrix.hconcat(translation_vector).vconcat(new Matrix({}, [0, 0, 0, 1]))
+    console.log('K = ', camera_matrix.pretty)
+    console.log('Rt = ', Rt.pretty)
+    console.log('P = ', Matrix.multiply(camera_matrix, Rt).pretty)
+    return Matrix.multiply(camera_matrix, Rt)
 }

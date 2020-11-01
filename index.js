@@ -99,17 +99,17 @@ async function main()
         const focal = 0.5/Math.tan(Math.PI*setting(`${name}-fov`)/180/2)
 
         viewMatrix = projection_matrix([
-            focal, 0, 0, 0,
-            0, -focal, 0, 0,
-            0, 0, 1, 0,
-            0, 0, 1, 0
+            [focal, 0, 0, 0],
+            [0, -focal, 0, 0],
+            [0, 0, 1, 0],
+            [0, 0, 1, 0]
         ],[
             setting(`${name}-yaw`), setting(`${name}-pitch`), setting(`${name}-roll`)
         ],[
             setting(`${name}-x`), setting(`${name}-y`), setting(`${name}-z`)
         ])
 
-        gl.uniformMatrix4fv(program.uViewMatrix, false, transpose(viewMatrix).data)
+        gl.uniformMatrix4fv(program.uViewMatrix, false, viewMatrix.T.data)
     
         // Render
         gl.clearColor(0.2, 0.4, 0.6, 1.0)
