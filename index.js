@@ -34,7 +34,10 @@ function setting(name)
 
 function allSettings(names)
 {
-    const selector = names.split(',').map(name => `[name^="${name}"]`).join(', ')
+    const selector = names
+        .split(',')
+        .map(name => `[name^="${name.length > 0 ? name : "-"}"]`)
+        .join(', ')
 
     return JSON.stringify(
         Array
@@ -55,25 +58,28 @@ async function main()
     }
 
     const program = createProgram(gl)
+    const program2 = programInfo2(gl)
     const buffer = await createBuffer(gl)
+    const buffer2 = await createCameraBuffer(gl)
     const texture = await createTexture(gl)
 
     const prevSettings = {}
 
     function animationFrame()
     {
-        renderIfNeeded('camera1', renderView)
-        renderIfNeeded('camera2', renderView)
-        renderIfNeeded('epipolar,camera1,camera2', updateEpipolarGeometry)
+        const showCameras = setting('renderer-show-cameras')
+        renderIfNeeded('camera1', showCameras ? 'camera1,camera2' : 'camera1', renderView)
+        renderIfNeeded('camera2', showCameras ? 'camera1,camera2' : 'camera2', renderView)
+        renderIfNeeded('epipolar', 'epipolar,camera1,camera2', updateEpipolarGeometry)
 
         requestAnimationFrame(animationFrame)
     }
 
     requestAnimationFrame(animationFrame)
 
-    function renderIfNeeded(name, render)
+    function renderIfNeeded(name, selector, render)
     {
-        const settings = allSettings(name)
+        const settings = allSettings(selector)
 
         if (prevSettings[name] === settings)
             return
@@ -117,36 +123,31 @@ async function main()
         const [x1, y1, x2, y2] = compute_lines(id, x, y, F)
 
         document.querySelector(`#svg${3-id}`).innerHTML = `
-            <line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" 
+            <line x1="${x1}" y1="${-y1}" x2="${x2}" y2="${-y2}" 
                 style="stroke: red; stroke-width: 0.01;" />
         `
 
         const [x3, y3, x4, y4] = compute_lines(3-id, x2, y2, F)
 
         document.querySelector(`#svg${id}`).innerHTML = `
-            <line x1="${x3}" y1="${y3}" x2="${x4}" y2="${y4}" 
+            <line x1="${x3}" y1="${-y3}" x2="${x4}" y2="${-y4}" 
                 style="stroke: red; stroke-width: 0.01;" />
         `
     }
  
     function renderView(name)
     {
-        gl.useProgram(program.program)
+        // Clear
+        gl.clearColor(0.2, 0.4, 0.6, 1.0)
+        gl.clearDepth(-1000000)
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
+        gl.enable(gl.DEPTH_TEST)
+        gl.depthFunc(gl.GEQUAL)
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, buffer.buffer)
-        gl.vertexAttribPointer(program.attributes.vertexPosition, 3, gl.FLOAT, false, 20, 0)
-        gl.enableVertexAttribArray(program.attributes.vertexPosition)
-        
-        gl.bindBuffer(gl.ARRAY_BUFFER, buffer.buffer)
-        gl.vertexAttribPointer(program.attributes.vertexTexCoord, 2, gl.FLOAT, false, 20, 12)
-        gl.enableVertexAttribArray(program.attributes.vertexTexCoord)
-
-
-        gl.activeTexture(gl.TEXTURE0)
-        gl.bindTexture(gl.TEXTURE_2D, texture)
-        gl.uniform1i(program.uniforms.sampler, 0)
-
+        // Setup
         const focal = 0.5/Math.tan(Math.PI*setting(`${name}-fov`)/180/2)
+        const other = (name == 'camera1' ? 'camera2' : 'camera1')
+        const showCameras = setting('renderer-show-cameras')
 
         viewMatrix = projection_matrix([
             [focal, 0, 0, 0],
@@ -159,16 +160,49 @@ async function main()
             setting(`${name}-x`), setting(`${name}-y`), setting(`${name}-z`)
         ])
 
+        // Render Scene
+        gl.useProgram(program.program)
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffer.buffer)
+        gl.vertexAttribPointer(program.attributes.vertexPosition, 3, gl.FLOAT, false, 20, 0)
+        gl.enableVertexAttribArray(program.attributes.vertexPosition)
+        
+        gl.vertexAttribPointer(program.attributes.vertexTexCoord, 2, gl.FLOAT, false, 20, 12)
+        gl.enableVertexAttribArray(program.attributes.vertexTexCoord)
+
+        gl.activeTexture(gl.TEXTURE0)
+        gl.bindTexture(gl.TEXTURE_2D, texture)
+        gl.uniform1i(program.uniforms.sampler, 0)
+
         gl.uniformMatrix4fv(program.uViewMatrix, false, viewMatrix.T.data)
     
-        // Render
-        gl.clearColor(0.2, 0.4, 0.6, 1.0)
-        gl.clearDepth(-1000000)
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
-        gl.enable(gl.DEPTH_TEST)
-        gl.depthFunc(gl.GEQUAL)
-    
         gl.drawArrays(gl.TRIANGLES, 0, buffer.count)
+
+        // Render other camera
+        if (showCameras)
+        {
+            gl.useProgram(program2.program)
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, buffer2.buffer)
+            gl.vertexAttribPointer(program2.aVertexPosition, 3, gl.FLOAT, false, 24, 0)
+            gl.enableVertexAttribArray(program2.aVertexPosition)
+            
+            gl.vertexAttribPointer(program2.aVertexColor, 3, gl.FLOAT, false, 24, 12)
+            gl.enableVertexAttribArray(program2.aVertexColor)
+
+            gl.uniformMatrix4fv(program2.uViewMatrix, false, viewMatrix.T.data)
+            gl.uniformMatrix3fv(program2.uCameraRotation, 
+                                false,
+                                compute_rotation_matrix(setting(`${other}-yaw`), setting(`${other}-pitch`), setting(`${other}-roll`)).T.data)
+            gl.uniform3f(program2.uCameraPosition, 
+                        setting(`${other}-x`),
+                        setting(`${other}-y`),
+                        setting(`${other}-z`))
+        
+            gl.drawArrays(gl.TRIANGLES, 0, buffer2.count)
+        }
+    
+        // Store result
         gl.flush()
 
         canvases[name].drawImage(canvas, 0, 0)
@@ -187,7 +221,7 @@ function setup_svg_events()
                 throw Error('Wrong svg name')
 
             const x = 2 * event.offsetX / svg.clientWidth - 1
-            const y = 2 * event.offsetY / svg.clientWidth - 1
+            const y = -2 * event.offsetY / svg.clientWidth + 1
             
             document.querySelector('input[name="epipolar-anchor"]').value = [id, x, y].join(',')
         })

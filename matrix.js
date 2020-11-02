@@ -62,6 +62,33 @@ class Matrix {
         return new Matrix({}, [0, -z, y], [z, 0, -x], [-y, x, 0])
     }
 
+    get det() {
+        if (this.rows !== this.cols)
+            throw Error(`Cant get det for shape ${this.rows}x${this.cols}.`)
+
+        if (this.rows !== 3)
+            throw Error(`Not implemented.`)
+
+        return this.at(0, 0) * this.at(1, 1) * this.at(2, 2) +
+               this.at(0, 1) * this.at(1, 2) * this.at(2, 0) +
+               this.at(0, 2) * this.at(1, 0) * this.at(2, 1) -
+               this.at(0, 2) * this.at(1, 1) * this.at(2, 0) -
+               this.at(0, 0) * this.at(1, 2) * this.at(2, 1) -
+               this.at(0, 1) * this.at(1, 0) * this.at(2, 2)
+    }
+
+    get inv() {
+        if (this.rows !== 3 || this.cols !== 3)
+            throw Error(`Not implemented.`)
+
+        const [a, b, c, d, e, f, g, h, i] = this.data
+        
+        return Matrix.multiply(1/this.det, new Matrix({}, 
+            [(e*i-f*h), -(d*i-f*g), (d*h-e*g)],
+            [-(b*i-c*h), (a*i-c*g), -(a*h-b*g)],
+            [(b*f-c*e), -(a*f-c*d), (a*e-b*d)]).T)
+    }
+
     hconcat(other) {
         if (this.rows !== other.rows)
             throw Error(`Cant hconcat shapes ${this.rows}x${this.cols} and ${other.rows}x${other.cols}.`)
@@ -224,12 +251,9 @@ function projection_matrix(camera_matrix, [yaw, pitch, roll], view_position) {
     rotation_matrix = compute_rotation_matrix(yaw, pitch, roll).T
 
     translation_vector = Matrix.op(-1, '*', rotation_matrix, '*', new Matrix({}, ...view_position))
-    // console.log('t = ', translation_vector.T.pretty)
 
     const Rt = rotation_matrix.hconcat(translation_vector).vconcat(new Matrix({}, [0, 0, 0, 1]))
-    // console.log('K = ', camera_matrix.pretty)
-    // console.log('Rt = ', Rt.pretty)
-    // console.log('P = ', Matrix.multiply(camera_matrix, Rt).pretty)
+
     return Matrix.multiply(camera_matrix, Rt)
 }
 
@@ -245,11 +269,12 @@ function fundamental_matrix(camera_matrix1, [yaw1, pitch1, roll1], view_position
     const t1 = new Matrix({}, ...view_position1)
     const t2 = new Matrix({}, ...view_position2)
 
-    const R12 = Matrix.multiply(R1.T, R2)
-    const t12 = Matrix.multiply(R1.T, Matrix.op(t2, '-', t1))
+    // R12 and t12 are R and t from wikipedia
+    const R12 = Matrix.multiply(R2.T, R1)
+    const t12 = Matrix.multiply(R1.T, Matrix.op(t1, '-', t2))
 
-    const E = Matrix.multiply(R12.T, Matrix.op(-1, '*', R12.T, '*', t12).cross)
-    const F = Matrix.op(K2, '*', E, '*', K1.T)
+    const E = Matrix.multiply(R12, t12.cross)
+    const F = Matrix.op(K2.inv.T, '*', E, '*', K1.inv)
 
     return F
 }

@@ -58,3 +58,47 @@ async function createTexture(gl)
 
     return texture
 }
+
+async function createCameraBuffer(gl)
+{
+    const buffer = gl.createBuffer()
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer)
+
+    const array = {
+        array: new Float32Array([
+            0, 0, 0, 150, 150, 150,
+            1, -1, 1, 150, 150, 150,
+            1, 1, 1, 150, 150, 150,
+
+            0, 0, 0, 200, 200, 200,
+            1, 1, 1, 200, 200, 200,
+            -1, 1, 1, 200, 200, 200,
+
+            0, 0, 0, 150, 150, 150,
+            -1, 1, 1, 150, 150, 150,
+            -1, -1, 1, 150, 150, 150,
+
+            0, 0, 0, 100, 100, 100,
+            -1, -1, 1, 100, 100, 100,
+            1, -1, 1, 100, 100, 100,
+
+            1, 1, 1, 100, 200, 100,
+            1, -1, 1, 200, 100, 100,
+            -1, -1, 1, 200, 100, 100,
+
+            1, 1, 1, 100, 200, 100,
+            -1, 1, 1, 100, 200, 100,
+            -1, -1, 1, 200, 100, 100,
+        ]),
+        count: 18
+    }
+
+
+    gl.bufferData(gl.ARRAY_BUFFER, array.array, gl.STATIC_DRAW)
+
+    return {
+        array: array.array,
+        buffer: buffer,
+        count: array.count
+    }
+}
