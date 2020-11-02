@@ -26,11 +26,20 @@ attribute vec3 aVertexColor;
 uniform mat4 uViewMatrix;
 uniform vec3 uCameraPosition;
 uniform mat3 uCameraRotation;
+uniform float uCameraFocal;
 
 varying highp vec3 vColor;
 
 void main() {
-    vec3 vertexPosition = uCameraRotation * (4.0*aVertexPosition) + uCameraPosition;
+    // Apply field of view 
+    vec3 vertexPositionInCamera = uCameraFocal < 1.0
+        ? vec3(aVertexPosition.x, aVertexPosition.y, aVertexPosition.z*uCameraFocal)
+        : vec3(aVertexPosition.x/uCameraFocal, aVertexPosition.y/uCameraFocal, aVertexPosition.z);
+
+    // Apply scale
+    vertexPositionInCamera *= 4.0;
+    // Apply redered camera orientation
+    vec3 vertexPosition = uCameraRotation * vertexPositionInCamera + uCameraPosition;
     gl_Position = uViewMatrix * vec4(vertexPosition, 1);
     gl_Position.z = gl_Position.w * (-gl_Position.z/500.0 + 1.0);
     vColor = aVertexColor;
@@ -50,5 +59,6 @@ void main() {
         uViewMatrix: gl.getUniformLocation(program, 'uViewMatrix'),
         uCameraPosition: gl.getUniformLocation(program, 'uCameraPosition'),
         uCameraRotation: gl.getUniformLocation(program, 'uCameraRotation'),
+        uCameraFocal: gl.getUniformLocation(program, 'uCameraFocal'),
     }
 }

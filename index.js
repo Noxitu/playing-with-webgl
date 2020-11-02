@@ -46,6 +46,11 @@ function allSettings(names)
     )
 }
 
+function fov2focal(fov)
+{
+    return 0.5/Math.tan(Math.PI*fov/180/2)
+}
+
 async function main()
 {
     const canvas = document.querySelector('#main_canvas')
@@ -102,8 +107,8 @@ async function main()
             return
         }
 
-        const focal1 = 0.5/Math.tan(Math.PI*setting(`camera1-fov`)/180/2)
-        const focal2 = 0.5/Math.tan(Math.PI*setting(`camera2-fov`)/180/2)
+        const focal1 = fov2focal(setting(`camera1-fov`))
+        const focal2 = fov2focal(setting(`camera2-fov`))
 
         const F = fundamental_matrix([
             [focal1, 0, 0],
@@ -149,7 +154,7 @@ async function main()
         gl.depthFunc(gl.GEQUAL)
 
         // Setup
-        const focal = 0.5/Math.tan(Math.PI*setting(`${name}-fov`)/180/2)
+        const focal = fov2focal(setting(`${name}-fov`))
         const other = (name == 'camera1' ? 'camera2' : 'camera1')
         const showCameras = setting('renderer-show-cameras')
 
@@ -202,6 +207,7 @@ async function main()
                         setting(`${other}-x`),
                         setting(`${other}-y`),
                         setting(`${other}-z`))
+            gl.uniform1f(program2.uCameraFocal, fov2focal(setting(`${other}-fov`)))
         
             gl.drawArrays(gl.TRIANGLES, 0, buffer2.count)
         }
