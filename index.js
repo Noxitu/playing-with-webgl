@@ -96,7 +96,11 @@ async function main()
         const anchor = setting(`epipolar-anchor`)
 
         if (anchor === '')
+        {
+            document.querySelector(`#svg1`).innerHTML = ''
+            document.querySelector(`#svg2`).innerHTML = ''
             return
+        }
 
         const focal1 = 0.5/Math.tan(Math.PI*setting(`camera1-fov`)/180/2)
         const focal2 = 0.5/Math.tan(Math.PI*setting(`camera2-fov`)/180/2)
@@ -212,7 +216,7 @@ async function main()
 function setup_svg_events()
 {
     document.querySelectorAll('svg').forEach(svg => {
-        svg.addEventListener('mousemove', (event) => {
+        const handler = (event) => {
             if (event.buttons != 1)
                 return
 
@@ -224,11 +228,18 @@ function setup_svg_events()
             const y = -2 * event.offsetY / svg.clientWidth + 1
             
             document.querySelector('input[name="epipolar-anchor"]').value = [id, x, y].join(',')
-        })
+        }
 
-        svg.addEventListener('mouseleave', (event) => {
-            // document.querySelector('input[name="epipolar-anchor"]').value = ''
-        })
+        const clear = () => {
+            document.querySelector('input[name="epipolar-anchor"]').value = ''
+        }
+
+        svg.addEventListener('mouseenter', handler)
+        svg.addEventListener('mousedown', handler)
+        svg.addEventListener('mousemove', handler)
+
+        svg.addEventListener('mouseup', clear)
+        svg.addEventListener('mouseleave', clear)
     })
 }
 

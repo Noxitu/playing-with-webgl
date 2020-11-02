@@ -62,7 +62,6 @@ main {
 
     <section style="grid-area: settings;">
         <label for="renderer-show-cameras">render camera cones</label><input type="checkbox" name="renderer-show-cameras"><br>
-        <input type="text" name="epipolar-anchor" value="">
     </section>
 
     <section style="grid-area: canvas2;">
@@ -84,6 +83,7 @@ main {
 </main>
 
 <canvas id="main_canvas" width="600" height="600"></canvas>
+<input type="hidden" name="epipolar-anchor" value="">
 
 <script src="matrix.js"></script>
 <script src="buffer.js"></script>

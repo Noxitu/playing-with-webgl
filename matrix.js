@@ -285,7 +285,17 @@ function compute_lines(id, x, y, F)
 
     const eq = id == 1 ? Matrix.multiply(F, point).data : Matrix.multiply(F.T, point).data
 
-    const f = x => -eq[0]/eq[1] * x - eq[2]/eq[1]
+    if (Math.abs(eq[1]) > 0.01)
+    {
+        const f = x => -eq[0]/eq[1] * x - eq[2]/eq[1]
+        return [-1, f(-1), 1, f(1)]
+    }
 
-    return [-1, f(-1), 1, f(1)]
+    if (Math.abs(eq[0]) > 0.01)
+    {
+        const f = y => -eq[1]/eq[0] * y - eq[2]/eq[0]
+        return [f(-1), -1, f(1), 1]
+    }
+
+    return [0, 0, 0, 0]
 }
