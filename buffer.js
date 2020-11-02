@@ -35,21 +35,41 @@ async function createBuffer(gl)
     }
 }
 
-function fetchTexture()
+function fetchTexture(maxSize)
 {
+    
     return new Promise((resolve, reject) => {
+        const resolutions = [8192, 4096, 1024]
+
+        const getNext = () => {
+            const size = resolutions.shift()
+
+            if (size === undefined)
+                reject('Failed to aquire any texture resolution.')
+
+            if (size > maxSize)
+            {
+                console.log(`Ignoring Texture.${size}.jpg since it is too big for available GL context(max=${maxSize}).`)
+                return getNext()
+            }
+
+            image.src = `data/di-trevi/Texture.${size}.jpg`
+        }
+
         const image = new Image()
         image.onload = () => { resolve(image) }
-        image.onerror = () => { image.src = 'data/di-trevi/Texture.jpg' }
-        image.src = 'data/di-trevi/Texture.4096.jpg'
+        image.onerror = () => { getNext() }
+        getNext()
     })
 }
 
 async function createTexture(gl)
 {
-    const image = await fetchTexture()
+    const MAX_TEXTURE_SIZE = gl.getParameter(gl.MAX_TEXTURE_SIZE)
+    console.log(`MAX_TEXTURE_SIZE = ${MAX_TEXTURE_SIZE}`)
+
+    const image = await fetchTexture(MAX_TEXTURE_SIZE)
     console.log(`Image size = ${image.width}x${image.height}`)
-    console.log(`MAX_TEXTURE_SIZE = ${gl.getParameter(gl.MAX_TEXTURE_SIZE)}`)
 
     const texture = gl.createTexture()
     gl.bindTexture(gl.TEXTURE_2D, texture)
